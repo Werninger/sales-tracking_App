@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -26,36 +26,28 @@ class MyApp extends StatelessWidget {
 }
 
 class MyAppState extends ChangeNotifier {
-  String product1_name = "Product 1";
-  String product2_name = "Product 2";
-  String product3_name = "Product 3";
-
-  void setName(String s, String name){
+  Product p1 = Product("Product 1", 10.0);
+  Product p2 = Product("Product 3", 20.0);
+  Product p3 = Product("Product 3", 30.0);
+  
+  List<Product> productList = [];
+  
+  void set(String name, var x){
+    if (x == null){return;}
     switch (name){
-      case 'p1':
-        product1_name = s;
-        break;
-      case 'p2':
-        product2_name = s;
-        break;
-      case 'p3':
-        product3_name = s;
-        break;
+      case 'p1_n': p1.name = x; break;
+      case 'p2_n': p2.name = x; break;
+      case 'p3_n': p3.name = x; break;
+      case 'p1_p': p1.price = x; break;
+      case 'p2_p': p2.price = x; break;
+      case 'p3_p': p3.price = x; break;
       default:
         break;
     }
     notifyListeners();
   }
 
-  var product1_curr = 0;
-  var product2_curr = 0;
-  var product3_curr = 0;
 
-  var product1 = 0;
-  var product2 = 0;
-  var product3 = 0;
-
-  double price_bab = 16.00;
   double toPay = 0.0;
 
   bool showPayButton = false;
@@ -68,36 +60,53 @@ class MyAppState extends ChangeNotifier {
   void add1(String variable) {
     switch (variable) {
       case 'product1':
-        product1_curr++;
+        p1.curr++;
+        toPay += p1.price;
         break;
       case 'product2':
-        product2_curr++;
+        p2.curr++;
+        toPay += p2.price;
         break;
       case 'product3':
-        product3_curr++;
+        p3.curr++;
+        toPay += p3.price;
         break;
       default:
         break;
     }
-    toPay += price_bab;
+    
     notifyListeners();
   }
-  void updateVariables(){
-    product1 += product1_curr;
-    product2 += product2_curr;
-    product3 += product3_curr;
+  int id = 0;
+    
+  List<Order> orderList = [];
+  String payment = '';
+  void setPayment(String s){
+    payment = s;
+    notifyListeners();
   }
+  void approveOrder(){
+    switch (payment){
+      case 'cash': p1.cash += p1.curr; p2.cash += p2.curr; p3.cash += p3.curr; break;
+      case 'twint': p1.twint += p1.curr; p2.twint += p2.curr; p3.twint += p3.curr; break;
+      case 'oth': p1.oth += p1.curr; p2.oth += p2.curr; p3.oth += p3.curr; break;
+    }
+    Order order = Order(++id, toPay, payment);
+    for (Product product in productList){
+      order.map[product.name] = product.curr;}
+    orderList.add(order);
+    resetVariables();
+    payment = '';
+  }
+  
   void resetVariables(){
-    product1_curr = 0;
-    product2_curr = 0;
-    product3_curr = 0;
+    p1.curr = 0;
+    p2.curr = 0;
+    p3.curr = 0;
     toPay = 0.0;
     notifyListeners();
   }
 
-  var cash = 0;
-  var twint = 0;
-  
   double totalIncome = 0.0;
   void addToIncome(){
     totalIncome += toPay;
@@ -187,23 +196,23 @@ class GeneratorPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               ElevatedButton(
                 onPressed: () {appState.add1('product1');},
-                child: Text('${appState.product1_name}: ${appState.product1_curr}'),
+                child: Text('${appState.p1.name}: ${appState.p1.curr}'),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               ElevatedButton(
                     onPressed: () {appState.add1('product2');},
-                    child: Text('${appState.product2_name}: ${appState.product2_curr}'),
+                    child: Text('${appState.p2.name}: ${appState.p2.curr}'),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               ElevatedButton(
                 onPressed: () {appState.add1('product3');},
-                child: Text('${appState.product3_name}: ${appState.product3_curr}'),
+                child: Text('${appState.p3.name}: ${appState.p3.curr}'),
               ),
             ],
           ), 
@@ -221,7 +230,7 @@ class GeneratorPage extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.shopping_cart_checkout), // Add the payment icon
+                    const Icon(Icons.shopping_cart_checkout), // Add the payment icon
                     Text('Pay: ${appState.toPay}'),
                   ],
                 ),
@@ -230,59 +239,91 @@ class GeneratorPage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           if (appState.showPayButton)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ElevatedButton(
-                  onPressed: (){appState.updateVariables();appState.addToIncome(); appState.resetVariables();appState.showPayButtonF();},
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            AlertDialog(
+              title: Text('Choose payment for ${appState.toPay}'),
+              actions: [
+                Center(
+                  child: Column(
                     children: [
-                      Icon(Icons.money), // Add the payment icon
-                      SizedBox(width: 8), // Add some spacing between the icon and text
-                      Text('Cash'),
+                      Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: (){appState.setPayment('cash');},
+                            child: const Row(children: [Icon(Icons.money), Text('Cash'),],),
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: () {appState.setPayment('twint');},
+                            child: const Row(children: [Icon(Icons.hexagon_outlined),Text('Twint'),],)
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: () {appState.setPayment('oth');},
+                            child: const Row(children: [Icon(Icons.home),Text('On the house')],)
+                          ),
+                          
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,children: [
+                        TextButton(
+                          onPressed: () {appState.setPayment('');},
+                          child: const Text('Cancel'),
+                        ),
+                        if (appState.payment != '')
+                          TextButton(
+                            onPressed: () {appState.approveOrder();appState.resetVariables();appState.showPayButtonF();},
+                            child: const Text('OK'),
+                          ),
+                      ],)
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {appState.updateVariables();appState.addToIncome(); appState.resetVariables();appState.showPayButtonF();},
-                  child: const Row(children: [Icon(Icons.hexagon_outlined),Text('Twint'),],)
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {appState.updateVariables(); appState.addToOTH(); appState.resetVariables();appState.showPayButtonF();},
-                  child: const Row(children: [Icon(Icons.home),Text('On the house')],)
-                ),
               ],
             ),
+            
         ],        
       ),
     );
   }     
 }
 
+
+
 class OverviewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
     
-    return ListView(
+    return Column(mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Text('Total ${appState.product1_name}: ${appState.product1}'),
-              Text('Total ${appState.product2_name}: ${appState.product2}'),
-              Text('Total ${appState.product3_name}: ${appState.product3}'),
-              const SizedBox(height: 50),
-              Text('Total income: ${appState.totalIncome}'),
-              Text('Total on the house: ${appState.totalOTH}'),
-
-            ],
-          ),
-        ),
+        Row(mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Total ${appState.p1.name}:  ${appState.p1.total}'),
+            const SizedBox(width: 20),
+            Text('x ${appState.p1.price} = ${appState.p1.total * appState.p1.price}'),
+          ],),
+        Row(mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Total ${appState.p2.name}: ${appState.p2.total}'),
+            const SizedBox(width: 20),
+            Text('x ${appState.p2.price} = ${appState.p2.total * appState.p2.price}'),
+          ],),
+        Row(mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Total ${appState.p3.name}: ${appState.p3.total}'),
+            const SizedBox(width: 20),
+            Text('x ${appState.p3.price} = ${appState.p3.total * appState.p3.price}'),
+          ],),
+        const SizedBox(height: 50),
+        Text('Total income: ${appState.totalIncome}'),
+        Text('Total on the house: ${appState.totalOTH}'),
+        const SizedBox(height: 10),
+        const Text('Orders: '),
+        Column(mainAxisAlignment: MainAxisAlignment.spaceBetween,children: [
+          for (Order order in appState.orderList) 
+            Text(' ${order.displayInfo()}'),
+          ],)
       ],
     );
   }
@@ -296,17 +337,37 @@ class SettingPage extends StatelessWidget{
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        ElevatedButton(
-          onPressed: () async {String input = await _showInputDialog(context, 'Name of Product 1'); appState.setName(input, 'p1');}, 
-          child: Text('Name of ${appState.product1_name}'),),
+        Row(mainAxisSize: MainAxisSize.min,children: [
+          ElevatedButton(
+            onPressed: () async {dynamic input = await _showInputDialog(context, 'Name of Product 1'); appState.set('p1_n', input);}, 
+            child: Text('Name of ${appState.p1.name}'),),
+          const SizedBox(width: 10),
+          ElevatedButton(
+            onPressed: () async {dynamic input = await _showInputDialog(context, 'Price of ${appState.p1.name}'); appState.set('p1_p',input);},
+            child: Text('Price of ${appState.p1.name}'),),
+
+        ],),
         const SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: () async {String input = await _showInputDialog(context, 'Name of Product 1'); appState.setName(input, 'p2');}, 
-          child: Text('Name of ${appState.product2_name}'),),
+        Row(mainAxisSize: MainAxisSize.min,children: [
+          ElevatedButton(
+            onPressed: () async {dynamic input = await _showInputDialog(context, 'Name of Product 2'); appState.set('p2_n',input);}, 
+            child: Text('Name of ${appState.p2.name}'),),
+          const SizedBox(width: 10),
+          ElevatedButton(
+            onPressed: () async {dynamic input = await _showInputDialog(context, 'Price of Product 2'); appState.set('p2_p',input);}, 
+            child: Text('Price of ${appState.p2.name}'),),
+          
+        ],),
         const SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: () async {String input = await _showInputDialog(context, 'Name of Product 1'); appState.setName(input, 'p3');}, 
-          child: Text('Name of ${appState.product3_name}'),),
+        Row(mainAxisSize: MainAxisSize.min,children: [
+          ElevatedButton(
+            onPressed: () async {dynamic input = await _showInputDialog(context, 'Name of ${appState.p3.name}'); appState.set('p3_n',input);}, 
+            child: Text('Name of ${appState.p3.name}'),),
+          const SizedBox(width: 10),
+          ElevatedButton(onPressed: () async {dynamic input = await _showInputDialog(context, 'Price of ${appState.p3.name}'); appState.set('p3_p',input);}, 
+            child: Text('Price of ${appState.p3.name}'))
+        ],),
+        
       ],
     );
   }
@@ -322,7 +383,7 @@ Future<dynamic> _showInputDialog(BuildContext context, String s) async {
           title: Text(s),
           content: TextField(
             controller: controller,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: 'Type...',
             ),
           ),
@@ -331,18 +392,63 @@ Future<dynamic> _showInputDialog(BuildContext context, String s) async {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
                 // Get the user input as a string
-                String userInput = controller.text;
-                Navigator.of(context).pop(userInput);
+                dynamic userInput = controller.text;
+
+                // Try parsing as double
+                double parsedValue;
+                try {
+                  parsedValue = double.parse(userInput);
+                  Navigator.of(context).pop(parsedValue);
+                } catch (e) {
+                  Navigator.of(context).pop(userInput);
+                }
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
       },
     );
   }
+
+class Product{
+  String name;
+  double price;
+
+  int curr;
+  int total;
+  int cash;
+  int twint;
+  int oth;
+  
+  Product(this.name, this.price, [this.curr = 0, this.total = 0, this.cash = 0, this.twint = 0, this.oth = 0]);
+  
+  int totalF(){
+    return cash+twint+oth;
+  }
+  dynamic totalIncome(dynamic t){
+    return t*price;
+  }
+}
+class Order{
+  int id;
+  String payment;
+  double price;
+  DateTime creationTime; // DateTime.now();
+  Map<String, int> map;
+
+  Order(this.id, this.price, this.payment)
+    : map = {},
+    creationTime = DateTime.now();
+  
+
+  String displayInfo() {
+    return ('Order: $id, Price: ${price.toStringAsFixed(2)}, Payment: $payment, Created at: $creationTime');
+  }
+
+}
